@@ -1,0 +1,52 @@
+---
+- hosts: localhost
+  connection: local
+  tasks:
+    - name: Create Resource Group
+      azure_rm_resourcegroup:
+        name: "{{ rgname }}"
+        location: westeurope
+
+    - name: Create an availability set for "{{ vmname }}"
+      azure_rm_availabilityset:
+        name: "{{ avsetname }}"
+        resource_group: "{{ rgname }}"
+        platform_update_domain_count: 5
+        platform_fault_domain_count: 2
+        sku: Aligned
+
+    - name: Create a public ip address
+      azure_rm_publicipaddress:
+        resource_group: "{{ rgname }}"
+        name: "{{ pipname }}"
+        allocation_method: Static
+  
+    - name: Create a network interface
+      azure_rm_networkinterface:
+        name: "{{ nicname }}"
+        resource_group: "{{ rgname }}"
+        virtual_network: "{{ vnet }}"
+        create_with_security_group: False
+        subnet_name: "{{ subnet }}"
+        ip_configurations:
+          - name: ipconfig1
+            public_ip_address_name: "{{ pipname }}"
+            primary: True
+
+    - name: Creating the VM
+      azure_rm_virtualmachine:
+        resource_group: "{{ rgname }}"
+        name: "{{ vmname }}"
+        availability_set: "{{ avsetname }}"
+        admin_username: "{{ username }}"
+        admin_password: "{{ password }}"
+        managed_disk_type: StandardSSD_LRS
+        network_interfaces: "{{ nicname }}"
+        image:
+          offer: CentOS
+          publisher: OpenLogic
+          sku: '8_2-gen2'
+          version: '8.2.2020100601'
+        vm_size: "{{ size }}"
+        tags:
+          OS: Linux
